@@ -1,67 +1,90 @@
 #!/bin/bash
 
-USAGE_MSG="usage: $0 -h hostname -c camera -s subdir -f filename [-d]"
+# Files are transferred to the remote system and then linked
+# so they instantly appear to the OODS and DBB services. These
+# two steps are done so a service doesn't start processing 
+# while a file is in the process of being transferred.
 
-DBB_FLAG=0
+usage_msg="usage: $0 -h hostname -c camera -s subdir -f filename [-d]"
+
+# declare the camera and dbb directory association
+declare -A camera_dbb
+camera_dbb=( ["auxtel"]="dbb" ["comcam"]="cc_dbb" )
+
+# argument parsing
+dbb_flag=0
 while getopts c:df:h:s: option
 do
 case "${option}"
 in
+# camera
 c)
-    if [ "$OPTARG" = "auxtel" ] || [ "$OPTARG" = "comcam" ]; then
-        CAMERA=${OPTARG}
+    if  [ ${camera_dbb[$OPTARG]} ]; then
+        camera=${OPTARG}
+        dbb_dir=${camera_dbb[$camera]}
     else
-        echo "-c argument must be auxtel or comcam"
+        echo -n "-c argument must be one of: "
+        for x in "${!camera_dbb[@]}"
+        do
+            echo -n $x" "
+        done
+        echo
         exit 1
     fi;;
+# whether or not to link a file into a DBB directory
 d)
-    DBB_FLAG=1
+    dbb_flag=1
     ;;
+# file name
 f)
-    FILENAME=${OPTARG}
+    filename=${OPTARG}
     ;;
+# host to transfer to
 h)
-    OODS_HOSTNAME=${OPTARG}
+    oods_hostname=${OPTARG}
     ;;
+# subdirectory (can be a, a/b, a/b/c, etc.)
 s)
-    SUB_DIR=${OPTARG}
+    sub_dir=${OPTARG}
     ;;
 esac
 done
 
-if [[ -z "$OODS_HOSTNAME" ]] || [[ -z "$FILENAME" ]] || [[ -z "$OODS_HOSTNAME" ]] || [[ -z "$SUB_DIR" ]]; then
-    echo $USAGE_MSG
+# check to see of all required arguments exist
+if [[ -z "$camera" ]] || [[ -z "$filename" ]] || [[ -z "$oods_hostname" ]] || [[ -z "$sub_dir" ]]; then
+    echo $usage_msg
     exit 1
 fi
 
-if [ "$CAMERA" = "auxtel" ]; then
-    DBB_DIR=dbb
-fi;
+# set the ssh login
+oods_login=saluser@$oods_hostname
 
-if [ "$CAMERA" = "comcam" ]; then
-    DBB_DIR=cc_dbb
-fi;
+# directory where files are first staged from the camera
+staging_root=/data/staging/$camera/camera/$sub_dir
 
-OODS_LOGIN=saluser@$OODS_HOSTNAME
-STAGING_ROOT=/data/staging/$CAMERA/camera/$SUB_DIR
-OODS_LANDING_ROOT=/data/staging/$CAMERA/oods/$SUB_DIR
-DBB_LANDING_ROOT=/data/staging/$DBB_DIR/$SUB_DIR
+# files where files are linked for the OODS
+oods_landing_root=/data/staging/$camera/oods/$sub_dir
 
-if [ "$DBB_FLAG" -eq 1 ]; then
-    ssh $OODS_LOGIN "\
-        mkdir -p $STAGING_ROOT && \
-        mkdir -p $OODS_LANDING_ROOT && \
-        mkdir -p $DBB_LANDING_ROOT && \
-        cat > $STAGING_ROOT/$FILENAME && \
-        ln $STAGING_ROOT/$FILENAME $OODS_LANDING_ROOT/$FILENAME && \
-        ln $STAGING_ROOT/$FILENAME $DBB_LANDING_ROOT/$FILENAME && \
-        rm $STAGING_ROOT/$FILENAME" <$FILENAME
+# files where files are linked for the data backbone
+dbb_landing_root=/data/staging/$dbb_dir/$sub_dir
+
+# if the dbb_flag is set, link files to both the OODS and DBB directories
+# if the dbb_flag is not set, only link the file to the OODS directory
+if [ "$dbb_flag" -eq 1 ]; then
+    ssh $oods_login "\
+        mkdir -p $staging_root && \
+        mkdir -p $oods_landing_root && \
+        mkdir -p $dbb_landing_root && \
+        cat > $staging_root/$filename && \
+        ln $staging_root/$filename $oods_landing_root/$filename && \
+        ln $staging_root/$filename $dbb_landing_root/$filename && \
+        rm $staging_root/$filename" <$filename
 else
-    ssh $OODS_LOGIN "\
-        mkdir -p $STAGING_ROOT && \
-        mkdir -p $OODS_LANDING_ROOT && \
-        cat > $STAGING_ROOT/$FILENAME && \
-        ln $STAGING_ROOT/$FILENAME $OODS_LANDING_ROOT/$FILENAME && \
-        rm $STAGING_ROOT/$FILENAME" <$FILENAME
+    ssh $oods_login "\
+        mkdir -p $staging_root && \
+        mkdir -p $oods_landing_root && \
+        cat > $staging_root/$filename && \
+        ln $staging_root/$filename $oods_landing_root/$filename && \
+        rm $staging_root/$filename" <$filename
 
 fi;
