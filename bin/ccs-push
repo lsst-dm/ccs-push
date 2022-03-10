@@ -20,7 +20,7 @@ do
     case "${option}" in
     # camera
     c)
-        if  [ ${camera_dbb[$OPTARG]} ];
+        if  [ "${camera_dbb[$OPTARG]}" ];
         then
             camera=${OPTARG}
             dbb_dir=${camera_dbb[$camera]}
@@ -28,7 +28,7 @@ do
             echo -n "-c argument must be one of: "
             for x in "${!camera_dbb[@]}"
             do
-                echo -n $x" "
+                echo -n "$x "
             done
             echo
             exit 1
@@ -50,7 +50,7 @@ do
         sub_dir=${OPTARG}
         ;;
     *)
-        echo $usage_msg
+        echo "$usage_msg"
         exit 1
         ;;
     esac
@@ -59,7 +59,7 @@ done
 # check to see of all required arguments exist
 if [[ -z "$camera" ]] || [[ -z "$filename" ]] || [[ -z "$oods_hostname" ]] || [[ -z "$sub_dir" ]];
 then
-    echo $usage_msg
+    echo "$usage_msg"
     exit 1
 fi
 
@@ -79,20 +79,20 @@ dbb_landing_root=/data/staging/$dbb_dir/$sub_dir
 # if the dbb_flag is not set, only link the file to the OODS directory
 if [ "$dbb_flag" -eq 1 ]; 
 then
-    ssh $oods_login "\
+    ssh "$oods_login" "\
         mkdir -p $staging_root && \
         mkdir -p $oods_landing_root && \
         mkdir -p $dbb_landing_root && \
         cat > $staging_root/$filename && \
         ln $staging_root/$filename $oods_landing_root/$filename && \
         ln $staging_root/$filename $dbb_landing_root/$filename && \
-        rm $staging_root/$filename" <$filename
+        rm $staging_root/$filename" <"$filename"
 else
-    ssh $oods_login "\
+    ssh "$oods_login" "\
         mkdir -p $staging_root && \
         mkdir -p $oods_landing_root && \
         cat > $staging_root/$filename && \
         ln $staging_root/$filename $oods_landing_root/$filename && \
-        rm $staging_root/$filename" <$filename
+        rm $staging_root/$filename" <"$filename"
 
 fi;
