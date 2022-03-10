@@ -79,6 +79,7 @@ dbb_landing_root=/data/staging/$dbb_dir/$sub_dir
 # if the dbb_flag is not set, only link the file to the OODS directory
 if [ "$dbb_flag" -eq 1 ]; 
 then
+    # shellcheck disable=SC2029
     ssh "$oods_login" "\
         mkdir -p $staging_root && \
         mkdir -p $oods_landing_root && \
@@ -88,6 +89,7 @@ then
         ln $staging_root/$filename $dbb_landing_root/$filename && \
         rm $staging_root/$filename" <"$filename"
 else
+    # shellcheck disable=SC2029
     ssh "$oods_login" "\
         mkdir -p $staging_root && \
         mkdir -p $oods_landing_root && \
