@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# This file is part of ccs-push
+#
+# Developed for the LSST Data Management System.
+# This product includes software developed by the LSST Project
+# (https://www.lsst.org).
+# See the COPYRIGHT file at the top-level directory of this distribution
+# for details of code ownership.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+# Files are transferred to the remote system and then linked
+# so they instantly appear to the OODS and DBB services. This
+# is done so a service doesn't start processing while a file
+# is in the process of being transferred.
+
+# declare the camera and dbb directory association
+declare -A camera_dbb
+camera_dbb=( ["auxtel"]="dbb" ["comcam"]="cc_dbb" )
+
+#usage info
+usage_msg="usage: $0 -h hostname -c camera -s subdir -f filename [-d]"
+
+
+# argument parsing
+dbb_flag=0
+while getopts c:df:h:s: option
+do
+    case "${option}" in
+    # camera
+    c)
+        if  [ "${camera_dbb[$OPTARG]}" ];
+        then
+            camera=${OPTARG}
+            dbb_dir=${camera_dbb[$camera]}
+        else
+            echo -n "-c argument must be one of: "
+            for x in "${!camera_dbb[@]}"
+            do
+                echo -n "$x "
+            done
+            echo
+            exit 1
+        fi;;
+    # whether or not to link a file into a DBB directory
+    d)
+        dbb_flag=1
+        ;;
+    # file name
+    f)
+        filename=${OPTARG}
+        ;;
+    # host to transfer to
+    h)
+        oods_hostname=${OPTARG}
+        ;;
+    # subdirectory (can be a, a/b, a/b/c, etc.)
+    s)
+        sub_dir=${OPTARG}
+        ;;
+    *)
+        echo "$usage_msg"
+        exit 1
+        ;;
+    esac
+done
+
+# check to see of all required arguments exist
+if [[ -z "$camera" ]] || [[ -z "$filename" ]] || [[ -z "$oods_hostname" ]] || [[ -z "$sub_dir" ]];
+then
+    echo "$usage_msg"
+    exit 1
+fi
+
+# set the ssh login
+oods_login=saluser@$oods_hostname
+
+# directory where files are first staged from the camera
+staging_root=/data/staging/$camera/camera/$sub_dir
+
+# files where files are linked for the OODS
+oods_landing_root=/data/staging/$camera/oods/$sub_dir
+
+# files where files are linked for the data backbone
+dbb_landing_root=/data/staging/$dbb_dir/$sub_dir
+
+# if the dbb_flag is set, link files to both the OODS and DBB directories
+# if the dbb_flag is not set, only link the file to the OODS directory
+if [ "$dbb_flag" -eq 1 ]; 
+then
+    # shellcheck disable=SC2029
+    ssh "$oods_login" "\
+        mkdir -p $staging_root && \
+        mkdir -p $oods_landing_root && \
+        mkdir -p $dbb_landing_root && \
+        cat > $staging_root/$filename && \
+        ln $staging_root/$filename $oods_landing_root/$filename && \
+        ln $staging_root/$filename $dbb_landing_root/$filename && \
+        rm $staging_root/$filename" <"$filename"
+else
+    # shellcheck disable=SC2029
+    ssh "$oods_login" "\
+        mkdir -p $staging_root && \
+        mkdir -p $oods_landing_root && \
+        cat > $staging_root/$filename && \
+        ln $staging_root/$filename $oods_landing_root/$filename && \
+        rm $staging_root/$filename" <"$filename"
+
+fi;
