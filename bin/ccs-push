@@ -49,6 +49,10 @@ do
     s)
         sub_dir=${OPTARG}
         ;;
+    *)
+        echo $usage_msg
+        exit 1
+        ;;
     esac
 done
 
