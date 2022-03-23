@@ -85,7 +85,7 @@ then
 fi
 
 # file name to create on remote side
-remote_file=`basename $filename`
+remote_file=$(basename $filename)
 
 # set the ssh login
 oods_login=saluser@$oods_hostname
