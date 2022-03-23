@@ -117,7 +117,7 @@ else
     ssh "$oods_login" "\
         mkdir -p $staging_root && \
         mkdir -p $oods_landing_root && \
-        cat > $staging_root/$remote_filename && \
+        cat > $staging_root/$remote_file && \
         ln $staging_root/$remote_file $oods_landing_root/$remote_file && \
         rm $staging_root/$remote_file" <"$filename"
 
