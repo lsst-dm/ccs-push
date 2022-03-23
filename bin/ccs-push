@@ -84,6 +84,9 @@ then
     exit 1
 fi
 
+# file name to create on remote side
+remote_file=$(basename "$filename")
+
 # set the ssh login
 oods_login=saluser@$oods_hostname
 
@@ -105,17 +108,17 @@ then
         mkdir -p $staging_root && \
         mkdir -p $oods_landing_root && \
         mkdir -p $dbb_landing_root && \
-        cat > $staging_root/$filename && \
-        ln $staging_root/$filename $oods_landing_root/$filename && \
-        ln $staging_root/$filename $dbb_landing_root/$filename && \
-        rm $staging_root/$filename" <"$filename"
+        cat > $staging_root/$remote_file && \
+        ln $staging_root/$remote_file $oods_landing_root/$remote_file && \
+        ln $staging_root/$remote_file $dbb_landing_root/$remote_file && \
+        rm $staging_root/$remote_file" <"$filename"
 else
     # shellcheck disable=SC2029
     ssh "$oods_login" "\
         mkdir -p $staging_root && \
         mkdir -p $oods_landing_root && \
-        cat > $staging_root/$filename && \
-        ln $staging_root/$filename $oods_landing_root/$filename && \
-        rm $staging_root/$filename" <"$filename"
+        cat > $staging_root/$remote_file && \
+        ln $staging_root/$remote_file $oods_landing_root/$remote_file && \
+        rm $staging_root/$remote_file" <"$filename"
 
 fi;
