@@ -26,12 +26,8 @@
 # is done so a service doesn't start processing while a file
 # is in the process of being transferred.
 
-# declare the camera and dbb directory association
-declare -A camera_dbb
-camera_dbb=( ["auxtel"]="dbb" ["comcam"]="cc_dbb" )
-
 #usage info
-usage_msg="usage: $0 -h hostname -c camera -s subdir -f filename [-d]"
+usage_msg="usage: $0 -h hostname -c (auxtel|comcam|maintel) -s subdir -f filename"
 
 
 # argument parsing
@@ -41,23 +37,13 @@ do
     case "${option}" in
     # camera
     c)
-        if  [ "${camera_dbb[$OPTARG]}" ];
+        if  [[ "$OPTARG" == "auxtel" || "$OPTARG" == "comcam" || "$OPTARG" == "maintel" ]];
         then
             camera=${OPTARG}
-            dbb_dir=${camera_dbb[$camera]}
         else
-            echo -n "-c argument must be one of: "
-            for x in "${!camera_dbb[@]}"
-            do
-                echo -n "$x "
-            done
-            echo
+            echo "$usage_msg"
             exit 1
         fi;;
-    # whether or not to link a file into a DBB directory
-    d)
-        dbb_flag=1
-        ;;
     # file name
     f)
         filename=${OPTARG}
@@ -96,28 +82,10 @@ staging_root=/data/staging/$camera/camera/$sub_dir
 # files where files are linked for the OODS
 oods_landing_root=/data/staging/$camera/oods/$sub_dir
 
-# files where files are linked for the data backbone
-dbb_landing_root=/data/staging/$dbb_dir/$sub_dir
-
-# if the dbb_flag is set, link files to both the OODS and DBB directories
-# if the dbb_flag is not set, only link the file to the OODS directory
-if [ "$dbb_flag" -eq 1 ]; 
-then
-    # shellcheck disable=SC2029
-    ssh "$oods_login" "\
-        mkdir -p $staging_root && \
-        mkdir -p $oods_landing_root && \
-        mkdir -p $dbb_landing_root && \
-        cat > $staging_root/$remote_file && \
-        ln $staging_root/$remote_file $oods_landing_root/$remote_file && \
-        ln $staging_root/$remote_file $dbb_landing_root/$remote_file && \
-        rm $staging_root/$remote_file" <"$filename"
-else
-    # shellcheck disable=SC2029
-    ssh "$oods_login" "\
-        mkdir -p $staging_root && \
-        mkdir -p $oods_landing_root && \
-        cat > $staging_root/$remote_file && \
-        mv $staging_root/$remote_file $oods_landing_root/$remote_file
-
-fi;
+# link the file to the OODS directory
+# shellcheck disable=SC2029
+ssh "$oods_login" "\
+    mkdir -p $staging_root && \
+    mkdir -p $oods_landing_root && \
+    cat > $staging_root/$remote_file && \
+    mv $staging_root/$remote_file $oods_landing_root/$remote_file"
