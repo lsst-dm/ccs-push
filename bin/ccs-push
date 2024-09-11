@@ -31,7 +31,6 @@ usage_msg="usage: $0 -h hostname -c (auxtel|comcam|maintel) -s subdir -f filenam
 
 
 # argument parsing
-dbb_flag=0
 while getopts c:df:h:s: option
 do
     case "${option}" in
