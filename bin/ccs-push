@@ -74,15 +74,12 @@ remote_file=$(basename "$filename")
 
 # set the ssh login
 oods_login=saluser@$oods_hostname
-oods_login=srp@$oods_hostname
 
 # directory where files are first staged from the camera
 staging_root=/data/staging/$camera/camera/$sub_dir
-staging_root=/home/srp/data/staging/$camera/camera/$sub_dir
 
 # files where files are linked for the OODS
 oods_landing_root=/data/staging/$camera/oods/$sub_dir
-oods_landing_root=/home/srp/data/staging/$camera/oods/$sub_dir
 
 # link the file to the OODS directory
 # shellcheck disable=SC2029
@@ -90,4 +87,4 @@ ssh "$oods_login" "\
     mkdir -p $staging_root && \
     mkdir -p $oods_landing_root && \
     cat > $staging_root/$remote_file && \
-    mv $staging_root/$remote_file $oods_landing_root/$remote_file" <"$filename"
+    mv $staging_root/$remote_file $oods_landing_root/$remote_file"
